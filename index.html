@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <!-- import CSS -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/element-ui/lib/theme-chalk/index.css"
+    />
+  </head>
+  <body>
+    <div id="app">
+      <el-row>
+        <el-col :offset="6" :md="12">
+          <el-card class="box-card">
+            <div slot="header" class="clearfix">
+              <span style="margin-top: 20pt;">My Todo List</span>
+              <el-button
+                style="float: right;"
+                icon="el-icon-plus"
+                round
+                @click="dialogTask = true"
+                size="small"
+                type="success"
+                >Add Todo</el-button
+              >
+            </div>
+
+            <el-card
+              shadow="hover"
+              style="margin: 8pt;"
+              v-for="(item, index) in todos"
+              :key="index"
+            >
+              <el-row>
+                <el-col :md="4">
+                  <div>
+                    <p style="font-weight: bold;">{{item.date}}</p>
+                    <el-checkbox
+                      style="margin-top: 16pt;"
+                      v-model="item.completed"
+                      @change="toggleComplete(item)"
+                      >Completed</el-checkbox
+                    >
+                  </div>
+                </el-col>
+                <el-col :md="20">
+                  <div>
+                    <p>
+                      {{item.title}}
+                    </p>
+                    <div style="float: right;">
+                      <el-button
+                        type="success"
+                        icon="el-icon-edit"
+                        @click="show(item, index)"
+                        circle
+                      ></el-button>
+                      <el-button
+                        type="danger"
+                        icon="el-icon-delete"
+                        @click="deleteTask(item.id,index)"
+                        circle
+                      ></el-button>
+                    </div>
+                  </div>
+                </el-col>
+              </el-row>
+            </el-card>
+          </el-card>
+        </el-col>
+      </el-row>
+
+      <!-- Dialog for adding a task -->
+      <el-dialog title="Add Task" :visible.sync="dialogTask">
+        <el-form :model="form" label-position="top">
+          <el-form-item label="Title">
+            <el-input v-model="form.title"></el-input>
+          </el-form-item>
+
+          <el-form-item label="When">
+            <el-date-picker
+              v-model="form.date"
+              type="date"
+              placeholder="Pick a day"
+            >
+            </el-date-picker>
+          </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+          <el-button @click="cancel()">Cancel</el-button>
+          <el-button v-if="form.id == ''" type="success" @click="addTask()"
+            >Save</el-button
+          >
+          <el-button v-if="form.id != ''" type="success" @click="updateTask()"
+            >Update</el-button
+          >
+        </span>
+      </el-dialog>
+    </div>
+  </body>
+  <script src="https://unpkg.com/vue/dist/vue.js"></script>
+  <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+  <script src="https://unpkg.com/element-ui/lib/umd/locale/en.js"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script>
+    ELEMENT.locale(ELEMENT.lang.en);
+    const axiosInstance = axios.create({
+      baseURL: "https://my-json-server.typicode.com/wsh-startup/mock-api/",
+      timeout: 20000,
+      headers: { "X-Custom-Header": "foobar" },
+    });
+    new Vue({
+      el: "#app",
+      data: function () {
+        return {
+          todos: [],
+          currentIndex: "",
+          multipleSelection: [],
+          dialogTask: false,
+          form: {
+            id: "",
+            title: "",
+            date: "",
+          },
+        };
+      },
+      methods: {
+        cancel() {
+          this.dialogTask = false;
+          this.form = {
+            id: "",
+            title: "",
+            date: "",
+          };
+        },
+        // Show Selected todo on dialog
+        show(task, currentIndex) {
+          this.form = task;
+          this.dialogTask = true;
+          this.currentIndex = currentIndex;
+        },
+        // Update Todo from api and ans updated items
+        async updateTask() {
+          try {
+            let response = await axiosInstance.put(
+              `tasks/${this.form.id}`,
+              this.form
+            );
+            this.todos[this.currentIndex] = response.data;
+            this.dialogTask = false;
+            this.$message({
+              showClose: true,
+              message: "Task update successfully",
+              type: "success",
+            });
+          } catch (e) {
+            console.log(e);
+          }
+        },
+        // Add Todo to Api and add the response in the items
+        async addTask() {
+        // Format date
+          let dateFormat =
+            this.form.date.getMonth() +
+            1 +
+            "/" +
+            this.form.date.getDate() +
+            "/" +
+            this.form.date.getFullYear();
+          this.form.date = dateFormat;
+          try {
+            let response = await axiosInstance.post("tasks", this.form);
+            let takDate = new Date(response.data.date);
+            response.data.date =
+              takDate.getMonth() +
+              1 +
+              "/" +
+              takDate.getDate() +
+              "/" +
+              takDate.getFullYear();
+              // Add the response to the todo items
+            this.todos.push(response.data);
+            // sort in accending Order
+            this.todos.sort(function(a, b) {
+                var dateA = new Date(a.date), dateB = new Date(b.date);
+                return dateA - dateB;
+            });
+            this.dialogTask = false;
+            this.form = {
+              id: "",
+              title: "",
+              date: "",
+            };
+            this.$message({
+                showClose: true,
+                message: "Add Task SuccessFully",
+                type: "success",
+              });
+          } catch (e) {
+            console.log(e);
+          }
+
+          console.log(this.form);
+        },
+        async toggleComplete(task) {
+          try {
+            let response = await axiosInstance.put(`tasks/${task.id}`, task);
+          } catch (e) {}
+        },
+        async deleteTask(id, index) {
+          try {
+            await axiosInstance.delete(`tasks/${id}`);
+            this.$message({
+              showClose: true,
+              message: "Delete todo successfully",
+              type: "success",
+            });
+            this.todos.splice(index, 1);
+          } catch (e) {
+            console.log(e);
+          }
+        },
+      },
+      // Life Cycle in vue when page is created
+      async created() {
+        try {
+          // Calling the all todos in api
+          let todosResponse = await axiosInstance.get("tasks");
+          todosResponse.data.sort((a, b) => (a.date > b.date) ? 1 : -1)
+          this.todos = todosResponse.data;
+          // Todos in accending order
+          this.todos.sort(function(a, b) {
+            var dateA = new Date(a.date), dateB = new Date(b.date);
+            return dateA - dateB;
+        });
+        } catch (e) {
+          console.log(e);
+        }
+      },
+    });
+  </script>
+  <style>
+    .clearfix:before,
+    .clearfix:after {
+      display: table;
+      content: "";
+    }
+    .clearfix:after {
+      clear: both;
+    }
+    #app {
+      margin-top: 30pt;
+    }
+  </style>
+</html>
