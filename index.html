@@ -135,8 +135,10 @@
           };
         },
         // Show Selected todo on dialog
-        show(task, currentIndex) {
-          this.form = task;
+       async show(task, currentIndex) {
+         // Get Task by id
+         let response = await axiosInstance.get(`tasks/${task.id}`)
+          this.form = response.data;
           this.dialogTask = true;
           this.currentIndex = currentIndex;
         },
