@@ -36,7 +36,7 @@
               <br />
               <br />
               <br />
-              <p>Feching</p>
+              <p>{{loadingMsg}}</p>
             </div>
 
             <el-card
@@ -64,14 +64,12 @@
                     </p>
                     <div style="float: right;">
                       <el-button
-                      :loading="isLoading"
                         type="success"
                         icon="el-icon-edit"
                         @click="show(item, index)"
                         circle
                       ></el-button>
                       <el-button
-                      :loading="isLoading"
                         type="danger"
                         icon="el-icon-delete"
                         @click="deleteTask(item.id,index)"
@@ -135,6 +133,7 @@
           dialogTask: false,
           isLoading:false,
           isLoadingStart:false,
+          loadingMsg:'',
           form: {
             id: "",
             title: "",
@@ -154,9 +153,12 @@
         // Show Selected todo on dialog
        async show(task, currentIndex) {
          // Get Task by id
+         this.isLoadingStart = true
+        this.loadingMsg = 'Getting todo..'
+        this.dialogTask = true
          let response = await axiosInstance.get(`tasks/${task.id}`)
+         this.isLoadingStart = false
           this.form = response.data;
-          this.dialogTask = true;
           this.currentIndex = currentIndex;
         },
         // Update Todo from api and ans updated items
@@ -237,9 +239,10 @@
         },
         async deleteTask(id, index) {
           try {
-            this.isLoading = true
+            this.loadingMsg = 'deleting todo..'
+            this.isLoadingStart = true
             await axiosInstance.delete(`tasks/${id}`);
-            this.isLoading = false
+            this.isLoadingStart = false
             this.$message({
               showClose: true,
               message: "Delete todo successfully",
@@ -255,6 +258,7 @@
       async created() {
         try {
           // Calling the all todos in api
+          this.loadingMsg = 'fetching'
           this.isLoadingStart = true
           let todosResponse = await axiosInstance.get("tasks");
           this.isLoadingStart = false
